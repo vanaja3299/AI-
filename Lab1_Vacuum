@@ -1,0 +1,33 @@
+environment = {}
+environment["A"] = input("Enter state of Location A (Clean/Dirty): ").capitalize()
+environment["B"] = input("Enter state of Location B (Clean/Dirty): ").capitalize()
+
+# Take input for starting location
+vacuum_location = input("Enter starting location of Vacuum (A/B): ").upper()
+
+# Function to print environment
+def print_environment():
+    print(f"Location A: {environment['A']}, Location B: {environment['B']}")
+
+# Reflex Vacuum Cleaner Agent
+def vacuum_agent(location):
+    if environment[location] == "Dirty":
+        print(f"Vacuum is at {location} → Cleaning {location}")
+        environment[location] = "Clean"
+    else:
+        print(f"Vacuum is at {location} → Already Clean")
+
+# Main Program
+print("\nInitial Environment:")
+print_environment()
+print(f"Vacuum starting at {vacuum_location}\n")
+
+# Run agent for both locations
+for _ in range(2):   # two locations
+    vacuum_agent(vacuum_location)
+    print_environment()
+    # Move to the other location
+    vacuum_location = "B" if vacuum_location == "A" else "A"
+
+print("\nFinal Environment State:")
+print_environment()
