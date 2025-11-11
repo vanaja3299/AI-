@@ -1,0 +1,156 @@
+import heapq
+from typing import Tuple, List, Optional, Dict
+
+GOAL = (1, 2, 3, 4, 5, 6, 7, 8, 0)
+MOVES = {
+    'U': -3,  
+    'D': 3,  
+    'L': -1,  
+    'R': 1  
+}
+
+def manhattan(state: Tuple[int, ...], goal: Tuple[int, ...] = GOAL) -> int:
+    dist = 0
+    for i, val in enumerate(state):
+        if val == 0:
+            continue
+        goal_index = val - 1
+        dist += abs((i // 3) - (goal_index // 3)) + abs((i % 3) - (goal_index % 3))
+    return dist
+
+def misplaced_tiles(state: Tuple[int, ...], goal: Tuple[int, ...] = GOAL) -> int:
+    return sum(1 for i, v in enumerate(state) if v != 0 and v != goal[i])
+
+def is_solvable(state: Tuple[int, ...]) -> bool:
+   
+    arr = [x for x in state if x != 0]
+    inv = 0
+    for i in range(len(arr)):
+        for j in range(i+1, len(arr)):
+            if arr[i] > arr[j]:
+                inv += 1
+   
+    return inv % 2 == 0
+
+def neighbors(state: Tuple[int, ...]) -> List[Tuple[str, Tuple[int, ...]]]:
+    zero_pos = state.index(0)
+    nbrs = []
+    r, c = divmod(zero_pos, 3)
+    for move, delta in MOVES.items():
+        new_pos = zero_pos + delta
+       
+        if move == 'L' and c == 0: continue
+        if move == 'R' and c == 2: continue
+        if move == 'U' and r == 0: continue
+        if move == 'D' and r == 2: continue
+        new_state = list(state)
+        new_state[zero_pos], new_state[new_pos] = new_state[new_pos], new_state[zero_pos]
+        nbrs.append((move, tuple(new_state)))
+    return nbrs
+
+def reconstruct_path(came_from: Dict[Tuple[int,...], Tuple[Tuple[int,...], str]],
+                     current: Tuple[int,...]) -> List[str]:
+    path = []
+    while current in came_from:
+        current, move = came_from[current]
+        path.append(move)
+    return list(reversed(path))
+
+def a_star(start: Tuple[int, ...], heuristic=manhattan) -> Optional[Dict]:
+    if start == GOAL:
+        return {
+            'moves': [],
+            'states': [start],
+            'cost': 0,
+            'expanded': 0
+        }
+
+    if not is_solvable(start):
+        return None
+
+    open_heap = []
+    g_score = {start: 0}
+    f_score = {start: heuristic(start)}
+   
+    came_from: Dict[Tuple[int,...], Tuple[Tuple[int,...], str]] = {}
+
+    heapq.heappush(open_heap, (f_score[start], 0, start))  #
+    closed = set()
+    expanded = 0
+    tie = 1
+
+    while open_heap:
+        current_f, _, current = heapq.heappop(open_heap)
+
+        if current == GOAL:
+            moves = reconstruct_path(came_from, current)
+           
+            states = [start]
+            s = start
+            for m in moves:
+               
+                for move_char, next_state in neighbors(s):
+                    if move_char == m:
+                        s = next_state
+                        states.append(s)
+                        break
+            return {
+                'moves': moves,
+                'states': states,
+                'cost': g_score[current],
+                'expanded': expanded
+            }
+
+        closed.add(current)
+        expanded += 1
+
+        for move, nxt in neighbors(current):
+            if nxt in closed:
+                continue
+            tentative_g = g_score[current] + 1
+            if tentative_g < g_score.get(nxt, float('inf')):
+                came_from[nxt] = (current, move)
+                g_score[nxt] = tentative_g
+                f = tentative_g + heuristic(nxt)
+                f_prev = f_score.get(nxt)
+                f_score[nxt] = f
+               
+                heapq.heappush(open_heap, (f, tie, nxt))
+                tie += 1
+
+    return None  
+
+def pretty_print_state(state: Tuple[int, ...]) -> str:
+    s = ''
+    for i in range(9):
+        v = state[i]
+        s += '  ' if v == 0 else f'{v:2d}'
+        if (i + 1) % 3 == 0:
+            s += '\n'
+    return s
+
+if __name__ == "__main__":
+ 
+    starts = {
+        'easy':   (1, 2, 3, 4, 5, 6, 7, 0, 8),
+        'medium': (1, 2, 0, 4, 5, 3, 7, 8, 6),
+        'hard':   (5, 6, 7, 4, 0, 8, 3, 2, 1)
+    }
+
+
+    start_state = starts['medium']
+
+    print("Start state:")
+    print(pretty_print_state(start_state))
+    print("Solving... (A* with Manhattan heuristic)")
+
+    result = a_star(start_state, heuristic=manhattan)
+    if result is None:
+        print("This puzzle is not solvable.")
+    else:
+        print(f"Solved! cost (moves): {result['cost']}, nodes expanded: {result['expanded']}")
+        print("Moves sequence:", ' '.join(result['moves']))
+        print("\nSteps:")
+        for i, s in enumerate(result['states']):
+            print(f"Step {i}:")
+            print(pretty_print_state(s))
